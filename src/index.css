@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+@import "tailwindcss";
+
+@layer base {
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    color: #1d1d1f;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 14.5px;
+    line-height: 1.6;
+    letter-spacing: -0.011em;
+  }
+
+  /* Strict guarantee: no font size below 14px anywhere */
+  * {
+    font-size: max(14px, inherit);
+  }
+
+  /* Strict guarantee: no font weight above 500 anywhere except the brand logo */
+  b,
+  strong,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  th {
+    font-weight: 500;
+  }
+}
+
+/* Global rule: strictly cap any font weight above 500 everywhere except .font-brand-logo */
+.font-semibold,
+.font-bold,
+.font-extrabold,
+.font-black,
+.font-\[600\],
+.font-\[700\],
+.font-\[800\],
+.font-\[900\] {
+  font-weight: 500 !important;
+}
+
+/* Frost 360 Brand Typography (Clean Modern Sans-Serif, Inter font family, 24px, Font Weight 800) */
+.font-brand-logo,
+.font-brand-logo * {
+  font-family: 'Inter', sans-serif !important;
+  letter-spacing: -0.025em;
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  text-transform: uppercase !important;
+}
+
+/* Apple-style minimalist scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.16);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.32);
+}
+
+/* Completely hidden scrollbar utility */
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
