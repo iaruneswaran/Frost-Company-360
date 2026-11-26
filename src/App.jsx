@@ -31,6 +31,383 @@ import {
   Zap
 } from 'lucide-react';
 
+/* 100% exact match to user attached gradient bar style (media_1795675205760_5bfeb2e1.png) */
+const renderScoreScale = (score) => {
+  // Center positions for 5 segments in 310-width viewBox (5 to 305 = 300px bar)
+  // Segment 1: 5..65 (cx=35), 2: 65..125 (cx=95), 3: 125..185 (cx=155), 4: 185..245 (cx=215), 5: 245..305 (cx=275)
+  const centers = {
+    1: 35,
+    2: 95,
+    3: 155,
+    4: 215,
+    5: 275,
+  };
+  const cx = centers[score] ?? 155;
+  const pinColors = {
+    1: '#f70622',
+    2: '#e58c18',
+    3: '#febb39',
+    4: '#70d55e',
+    5: '#21b234',
+  };
+  const pinColor = pinColors[score] ?? '#70d55e';
+
+  return (
+    <div className="w-full max-w-[260px] my-2 select-none">
+      {/* SVG Gradient Bar with Hourglass Split Cutout, Internal White Ticks, and Dual-Triangle Pin */}
+      <div className="w-full">
+        <svg
+          viewBox="0 0 310 42"
+          className="w-full h-auto overflow-visible block"
+        >
+          <defs>
+            <linearGradient id="scoreBarGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#f70622" />
+              <stop offset="25%" stopColor="#e58c18" />
+              <stop offset="50%" stopColor="#febb39" />
+              <stop offset="75%" stopColor="#86de90" />
+              <stop offset="100%" stopColor="#21b234" />
+            </linearGradient>
+          </defs>
+
+          {/* Continuous Gradient Bar */}
+          <rect
+            x="5"
+            y="8"
+            width="300"
+            height="24"
+            rx="5"
+            ry="5"
+            fill="url(#scoreBarGradient)"
+          />
+
+          {/* 4 Internal White Tick Dashes (dividing the 5 equal segments at 20%, 40%, 60%, 80%) */}
+          {[65, 125, 185, 245].map((tx) => (
+            <line
+              key={tx}
+              x1={tx}
+              y1="16"
+              x2={tx}
+              y2="24"
+              stroke="#ffffff"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeOpacity="0.75"
+            />
+          ))}
+
+          {/* Hourglass / Inverted Chevron White Notch Cutout in the Bar at Active Position */}
+          <polygon
+            points={`${cx - 8},7 ${cx + 8},7 ${cx + 2.5},12.5 ${cx + 2.5},27.5 ${cx + 8},33 ${cx - 8},33 ${cx - 2.5},27.5 ${cx - 2.5},12.5`}
+            fill="#ffffff"
+          />
+
+          {/* Pin Marker: Top Downward Triangle ▼ */}
+          <polygon
+            points={`${cx - 5},1 ${cx + 5},1 ${cx},7.5`}
+            fill={pinColor}
+          />
+
+          {/* Pin Marker: Center Vertical Slit Line */}
+          <line
+            x1={cx}
+            y1="12"
+            x2={cx}
+            y2="28"
+            stroke={pinColor}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+
+          {/* Pin Marker: Bottom Upward Triangle ▲ */}
+          <polygon
+            points={`${cx - 5},39 ${cx + 5},39 ${cx},32.5`}
+            fill={pinColor}
+          />
+        </svg>
+      </div>
+
+      {/* Low, Medium, High Labels Below Bar */}
+      <div className="flex justify-between px-1 mt-1 text-[10.5px] font-medium">
+        <span className={score <= 2 ? 'text-[#dc2626] font-semibold' : 'text-[#86868b]'}>Low</span>
+        <span className={score === 3 ? 'text-[#b45309] font-semibold' : 'text-[#86868b]'}>Medium</span>
+        <span className={score >= 4 ? 'text-[#16a34a] font-semibold' : 'text-[#86868b]'}>High</span>
+      </div>
+    </div>
+  );
+};
+
+/* Subline clamped to exactly 2 lines without read more action */
+const CardSubline = ({ text }) => {
+  return (
+    <div className="mt-3">
+      <p className="text-[12.5px] text-[#86868b] leading-[1.55] line-clamp-2 min-h-[38px]">
+        {text}
+      </p>
+    </div>
+  );
+};
+
+/* Precomputed radial rays for the Overall Score Semicircle Gauge (100% match to media_1795675305384_c8f45193.png) */
+const OVERALL_GAUGE_RAYS = Array.from({ length: 85 }, (_, i) => {
+  const t = i / 84;
+  const theta = Math.PI * (1 - t);
+  const cx = 140;
+  const cy = 135;
+  const rIn = 78;
+  const rOut = 108;
+  const x1 = (cx + rIn * Math.cos(theta)).toFixed(2);
+  const y1 = (cy - rIn * Math.sin(theta)).toFixed(2);
+  const x2 = (cx + rOut * Math.cos(theta)).toFixed(2);
+  const y2 = (cy - rOut * Math.sin(theta)).toFixed(2);
+
+  let color;
+  if (t <= 0.25) {
+    const f = t / 0.25;
+    const r = Math.round(225 * (1 - f) + 249 * f);
+    const g = Math.round(29 * (1 - f) + 115 * f);
+    const b = Math.round(72 * (1 - f) + 22 * f);
+    color = `rgb(${r},${g},${b})`;
+  } else if (t <= 0.5) {
+    const f = (t - 0.25) / 0.25;
+    const r = Math.round(249 * (1 - f) + 234 * f);
+    const g = Math.round(115 * (1 - f) + 179 * f);
+    const b = Math.round(22 * (1 - f) + 8 * f);
+    color = `rgb(${r},${g},${b})`;
+  } else if (t <= 0.75) {
+    const f = (t - 0.5) / 0.25;
+    const r = Math.round(234 * (1 - f) + 132 * f);
+    const g = Math.round(179 * (1 - f) + 204 * f);
+    const b = Math.round(8 * (1 - f) + 22 * f);
+    color = `rgb(${r},${g},${b})`;
+  } else {
+    const f = (t - 0.75) / 0.25;
+    const r = Math.round(132 * (1 - f) + 34 * f);
+    const g = Math.round(204 * (1 - f) + 197 * f);
+    const b = Math.round(22 * (1 - f) + 94 * f);
+    color = `rgb(${r},${g},${b})`;
+  }
+
+  return { x1, y1, x2, y2, color };
+});
+
+const OverallScoreGauge = ({
+  score = 4.1,
+  label = '4.1',
+  subtitle = 'High Potential',
+  badgeText = '6 pts',
+}) => {
+  const cx = 140;
+  const cy = 135;
+  const rMid = 93;
+  const tAct = Math.max(0, Math.min(1, (score - 1) / 4));
+  const thetaAct = Math.PI * (1 - tAct);
+  const bx = (cx + rMid * Math.cos(thetaAct)).toFixed(2);
+  const by = (cy - rMid * Math.sin(thetaAct)).toFixed(2);
+
+  const filterId = `pillGlow-${badgeText.toString().replace(/[^a-zA-Z0-9]/g, '') || 'default'}`;
+
+  return (
+    <div className="relative w-full max-w-[285px] aspect-[280/155] flex items-center justify-center">
+      <svg className="w-full h-full overflow-visible" viewBox="0 0 280 155">
+        <defs>
+          <filter id={filterId} x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="2.5" stdDeviation="3" floodColor="#16a34a" floodOpacity="0.25" />
+            <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000000" floodOpacity="0.08" />
+          </filter>
+        </defs>
+
+        {/* Dense Radial Rays Arc (Red -> Orange -> Yellow -> Green) */}
+        {OVERALL_GAUGE_RAYS.map((ray, i) => (
+          <line
+            key={i}
+            x1={ray.x1}
+            y1={ray.y1}
+            x2={ray.x2}
+            y2={ray.y2}
+            stroke={ray.color}
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+        ))}
+
+        {/* Floating Frosted Pill Badge at Active Position */}
+        <g transform={`translate(${bx}, ${by})`} filter={`url(#${filterId})`}>
+          <rect
+            x="-31"
+            y="-13"
+            width="62"
+            height="26"
+            rx="13"
+            fill="#ffffff"
+          />
+          {/* Green Upward Triangle ▲ */}
+          <polygon
+            points="-19,3 -12,3 -15.5,-4"
+            fill="#16a34a"
+          />
+          {/* Badge text */}
+          <text
+            x="-7"
+            y="4"
+            className="text-[11.5px] font-bold fill-[#15803d] font-sans"
+          >
+            {badgeText}
+          </text>
+        </g>
+
+        {/* Center Score Metric & Rating */}
+        <text
+          x="140"
+          y="106"
+          textAnchor="middle"
+          className={`${label.length > 5 ? 'text-[28px]' : 'text-[44px]'} font-bold fill-[#1d1d1f] tracking-tight font-sans`}
+        >
+          {label}
+        </text>
+        <text
+          x="140"
+          y="128"
+          textAnchor="middle"
+          className="text-[12.5px] font-semibold fill-[#16a34a] font-sans"
+        >
+          {subtitle}
+        </text>
+      </svg>
+    </div>
+  );
+};
+
+/* 3D Isometric Geometric Icons for Strategic Analysis (SWOT) matching media_1795684549181_663a1f9a.png */
+const SwotCubeIcon = () => (
+  <svg className="w-16 h-16 overflow-visible" viewBox="0 0 68 68" fill="none">
+    <defs>
+      <filter id="swotCubeGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#22c55e" floodOpacity="0.25" />
+      </filter>
+      <linearGradient id="swotCubeTopGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#86efac" stopOpacity="0.5" />
+        <stop offset="100%" stopColor="#4ade80" stopOpacity="0.2" />
+      </linearGradient>
+      <linearGradient id="swotCubeLeftGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#22c55e" stopOpacity="0.3" />
+        <stop offset="100%" stopColor="#15803d" stopOpacity="0.15" />
+      </linearGradient>
+      <linearGradient id="swotCubeRightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#16a34a" stopOpacity="0.4" />
+        <stop offset="100%" stopColor="#14532d" stopOpacity="0.2" />
+      </linearGradient>
+    </defs>
+    
+    <ellipse cx="34" cy="38" rx="22" ry="12" fill="#22c55e" opacity="0.18" filter="url(#swotCubeGlow)" />
+
+    {/* Outer Translucent Isometric Wireframe Cube */}
+    <polygon points="8,20 34,35 34,62 8,47" fill="url(#swotCubeLeftGrad)" stroke="#22c55e" strokeWidth="1.2" strokeOpacity="0.7" />
+    <polygon points="34,35 60,20 60,47 34,62" fill="url(#swotCubeRightGrad)" stroke="#16a34a" strokeWidth="1.2" strokeOpacity="0.8" />
+    <polygon points="34,5 60,20 34,35 8,20" fill="url(#swotCubeTopGrad)" stroke="#4ade80" strokeWidth="1.4" strokeOpacity="0.9" />
+
+    {/* Inner Solid Floating Core Cube */}
+    <polygon points="23,34 34,40 34,51 23,45" fill="#15803d" />
+    <polygon points="34,40 45,34 45,45 34,51" fill="#166534" />
+    <polygon points="34,28 45,34 34,40 23,34" fill="#22c55e" stroke="#86efac" strokeWidth="0.8" />
+  </svg>
+);
+
+const SwotLayersIcon = () => (
+  <svg className="w-16 h-16 overflow-visible" viewBox="0 0 68 68" fill="none">
+    <defs>
+      <filter id="swotLayerGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#22c55e" floodOpacity="0.3" />
+      </filter>
+    </defs>
+
+    <ellipse cx="34" cy="24" rx="20" ry="10" fill="#22c55e" opacity="0.25" filter="url(#swotLayerGlow)" />
+
+    {/* Base Solid Isometric Block */}
+    <polygon points="12,41 34,53 34,61 12,49" fill="#15803d" />
+    <polygon points="34,53 56,41 56,49 34,61" fill="#14532d" />
+    <polygon points="34,30 56,41 34,53 12,41" fill="#16a34a" />
+
+    {/* Middle Floating Translucent Slab */}
+    <polygon points="12,28 34,40 34,42 12,30" fill="rgba(34,197,94,0.3)" />
+    <polygon points="34,40 56,28 56,30 34,42" fill="rgba(21,128,61,0.4)" />
+    <polygon points="34,17 56,28 34,40 12,28" fill="rgba(74,222,128,0.45)" stroke="#4ade80" strokeWidth="1.2" strokeOpacity="0.8" />
+
+    {/* Top Floating Glass Canopy Slab */}
+    <polygon points="12,17 34,29 34,31 12,19" fill="rgba(74,222,128,0.4)" />
+    <polygon points="34,29 56,17 56,19 34,31" fill="rgba(34,197,94,0.5)" />
+    <polygon points="34,6 56,17 34,29 12,17" fill="rgba(134,239,172,0.65)" stroke="#86efac" strokeWidth="1.4" />
+  </svg>
+);
+
+const SwotBladesIcon = () => (
+  <svg className="w-16 h-16 overflow-visible" viewBox="0 0 68 68" fill="none">
+    <defs>
+      <filter id="swotBladesGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#22c55e" floodOpacity="0.25" />
+      </filter>
+    </defs>
+
+    <ellipse cx="34" cy="38" rx="22" ry="12" fill="#22c55e" opacity="0.2" filter="url(#swotBladesGlow)" />
+
+    {/* Outer Left Translucent Hovering Wing */}
+    <polygon points="6,27 16,33 16,53 6,47" fill="rgba(74,222,128,0.25)" stroke="#4ade80" strokeWidth="1.2" strokeOpacity="0.7" />
+    <polygon points="11,24 16,27 16,33 11,30" fill="rgba(134,239,172,0.4)" stroke="#86efac" strokeWidth="1" strokeOpacity="0.7" />
+
+    {/* 4 Standing Isometric Server Blades */}
+    <polygon points="18,19 24,15 24,46 18,50" fill="#15803d" />
+    <polygon points="24,15 28,17 28,48 24,46" fill="#166534" />
+    <polygon points="18,19 22,21 28,17 24,15" fill="#22c55e" />
+
+    <polygon points="26,23 32,19 32,50 26,54" fill="#16a34a" />
+    <polygon points="32,19 36,21 36,52 32,50" fill="#15803d" />
+    <polygon points="26,23 30,25 36,21 32,19" fill="#4ade80" />
+
+    <polygon points="34,27 40,23 40,54 34,58" fill="#22c55e" />
+    <polygon points="40,23 44,25 44,56 40,54" fill="#16a34a" />
+    <polygon points="34,27 38,29 44,25 40,23" fill="#86efac" />
+
+    {/* Outer Right Translucent Hovering Wing */}
+    <polygon points="52,27 62,33 62,53 52,47" fill="rgba(74,222,128,0.25)" stroke="#4ade80" strokeWidth="1.2" strokeOpacity="0.7" />
+    <polygon points="47,24 52,27 52,33 47,30" fill="rgba(134,239,172,0.4)" stroke="#86efac" strokeWidth="1" strokeOpacity="0.7" />
+  </svg>
+);
+
+const SwotClusterIcon = () => (
+  <svg className="w-16 h-16 overflow-visible" viewBox="0 0 68 68" fill="none">
+    <defs>
+      <filter id="swotClusterGlow" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#22c55e" floodOpacity="0.28" />
+      </filter>
+    </defs>
+
+    <ellipse cx="34" cy="24" rx="20" ry="10" fill="#22c55e" opacity="0.22" filter="url(#swotClusterGlow)" />
+
+    {/* Clustered 3D Blocks at Base */}
+    <polygon points="12,43 24,49 24,59 12,53" fill="#15803d" />
+    <polygon points="24,49 32,45 32,55 24,59" fill="#14532d" />
+    <polygon points="20,38 32,45 24,49 12,43" fill="#22c55e" />
+
+    <polygon points="32,40 44,46 44,56 32,50" fill="#16a34a" />
+    <polygon points="44,46 56,40 56,50 44,56" fill="#15803d" />
+    <polygon points="44,34 56,40 44,46 32,40" fill="#4ade80" />
+
+    <polygon points="22,48 34,54 34,64 22,58" fill="#166534" />
+    <polygon points="34,54 46,48 46,58 34,64" fill="#14532d" />
+    <polygon points="34,42 46,48 34,54 22,48" fill="#15803d" />
+
+    {/* Floating Translucent Mid Layer */}
+    <polygon points="12,25 34,36 34,38 12,27" fill="rgba(34,197,94,0.3)" />
+    <polygon points="34,36 56,25 56,27 34,38" fill="rgba(21,128,61,0.4)" />
+    <polygon points="34,14 56,25 34,36 12,25" fill="rgba(74,222,128,0.45)" stroke="#4ade80" strokeWidth="1.2" strokeOpacity="0.8" />
+
+    {/* Floating Top Translucent Canopy */}
+    <polygon points="12,16 34,27 34,29 12,18" fill="rgba(74,222,128,0.4)" />
+    <polygon points="34,27 56,16 56,18 34,29" fill="rgba(34,197,94,0.5)" />
+    <polygon points="34,5 56,16 34,27 12,16" fill="rgba(134,239,172,0.65)" stroke="#86efac" strokeWidth="1.4" />
+  </svg>
+);
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('snapshot');
   const [activeSection, setActiveSection] = useState('snapshot');
@@ -150,20 +527,9 @@ export default function App() {
       ]
     },
     {
-      id: 'commercialization',
-      label: 'Commercialization & Risks',
-      subsections: [
-        { id: 'comm-readiness', label: 'Readiness Level' },
-        { id: 'comm-risks', label: 'Risks' },
-        { id: 'comm-impact', label: 'Regional Impact' },
-        { id: 'comm-applications', label: 'Application Potential' },
-      ]
-    },
-    {
       id: 'market-intel',
       label: 'Market Intelligence',
       subsections: [
-        { id: 'intel-buzz', label: 'Buzzworthiness' },
         { id: 'intel-competition', label: 'Technology Competition' },
         { id: 'intel-revenue', label: 'Revenue Magnitude' },
         { id: 'intel-investor', label: 'Investor Lens' },
@@ -183,7 +549,7 @@ export default function App() {
     },
   ];
 
-    // Scroll spy to highlight active section & manage sticky freeze
+  // Scroll spy to highlight active section & manage sticky freeze
   useEffect(() => {
     const handleScroll = () => {
       const y = window.scrollY;
@@ -194,7 +560,7 @@ export default function App() {
       // Check if near bottom of document (Strategic Analysis)
       if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 60) {
         setActiveSection('strategic-analysis');
-        setActiveSubSection('strat-patents');
+        setActiveSubSection('strat-future');
         return;
       }
 
@@ -614,43 +980,28 @@ export default function App() {
               </div>
             </div>
 
-            {/* 4 Key Metrics — Unwrapped into ONE single box with black right-side contents */}
-            <div className="pt-3.5 border-t border-black/[0.06] mt-3.5">
-              <div className="bg-white rounded-[14px] border border-black/[0.06] p-3.5 space-y-2.5">
-                <div className="flex items-center justify-between text-[13px]">
-                  <span className="text-[#86868b]">Stage</span>
-                  <span className="font-medium text-[#1d1d1f]">Series A ($71.2M)</span>
-                </div>
-
-                <div className="flex items-center justify-between text-[13px] pt-2 border-t border-black/[0.04]">
-                  <span className="text-[#86868b]">Total Funding</span>
-                  <div className="flex items-center gap-1.5 font-medium text-[#1d1d1f]">
-                    <span>$71.2 M</span>
-                    <span className="text-[12px]">Series A</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-[13px] pt-2 border-t border-black/[0.04]">
-                  <span className="text-[#86868b]">Targeting Lead</span>
-                  <span className="font-medium text-[#1d1d1f]">#1 Knottin PIP</span>
-                </div>
-
-                <div className="flex items-center justify-between text-[13px] pt-2 border-t border-black/[0.04]">
-                  <span className="text-[#86868b]">Readiness</span>
-                  <div className="flex items-center gap-1.5 font-medium text-[#1d1d1f]">
-                    <span>Phase 3 (2028)</span>
-                    <span className="text-[12px]">Level 3</span>
-                  </div>
-                </div>
+            {/* Financial Box below www.twosteptx.com — Remains visible even when collapse happens on scroll */}
+            <div className="mt-3.5 bg-white border border-black/[0.08] rounded-[14px] p-3 space-y-2.5">
+              <div className="flex items-start justify-between gap-3 text-[13px]">
+                <span className="text-[#86868b]">Investment Stage</span>
+                <span className="font-medium text-[#1d1d1f] text-right">Series A</span>
+              </div>
+              <div className="flex items-start justify-between gap-3 text-[13px]">
+                <span className="text-[#86868b]">Total Funding</span>
+                <span className="font-medium text-[#1d1d1f] text-right">$71.2 M</span>
+              </div>
+              <div className="flex items-start justify-between gap-3 text-[13px]">
+                <span className="text-[#86868b]">Annual Revenue</span>
+                <span className="font-medium text-[#1d1d1f] text-right">NA</span>
               </div>
             </div>
 
-            {/* Company Metadata Details — Hide this only when page is scrolled */}
+            {/* Company Snapshot Attributes — Collapsible on scroll */}
             <div
               className={`transition-all duration-300 ease-in-out overflow-hidden ${
                 isScrolled
                   ? 'max-h-0 opacity-0 mt-0 pointer-events-none'
-                  : 'max-h-[500px] opacity-100 mt-4 space-y-3 text-[13px] text-[#6e6e73] pt-4 border-t border-black/[0.06]'
+                  : 'max-h-[500px] opacity-100 mt-3 pt-3 border-t border-black/[0.06] space-y-2.5 text-[13px]'
               }`}
             >
               <div className="flex items-start justify-between gap-3">
@@ -672,10 +1023,6 @@ export default function App() {
               <div className="flex items-start justify-between gap-3">
                 <span className="text-[#86868b]">Key Markets</span>
                 <span className="font-medium text-[#1d1d1f] text-right">United States</span>
-              </div>
-              <div className="flex items-start justify-between gap-3">
-                <span className="text-[#86868b]">Annual Revenue</span>
-                <span className="font-medium text-[#1d1d1f] text-right">NA</span>
               </div>
               <div className="flex items-start justify-between gap-3">
                 <span className="text-[#86868b]">No. of Employees</span>
@@ -781,38 +1128,26 @@ export default function App() {
               </div>
             </div>
 
-            {/* 4 Key Metrics — Unwrapped into ONE single box with black right-side contents */}
-            <div className="pt-2 border-t border-black/[0.06]">
-              <div className="bg-white rounded-[12px] border border-black/[0.06] p-3 space-y-2">
-                <div className="flex items-center justify-between text-[12.5px]">
-                  <span className="text-[#86868b]">Stage</span>
-                  <span className="font-medium text-[#1d1d1f]">Series A ($71.2M)</span>
-                </div>
-                <div className="flex items-center justify-between text-[12.5px] pt-1.5 border-t border-black/[0.04]">
-                  <span className="text-[#86868b]">Total Funding</span>
-                  <div className="flex items-center gap-1.5 font-medium text-[#1d1d1f]">
-                    <span>$71.2M</span>
-                    <span className="text-[11.5px]">Series A</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-[12.5px] pt-1.5 border-t border-black/[0.04]">
-                  <span className="text-[#86868b]">Targeting Lead</span>
-                  <span className="font-medium text-[#1d1d1f]">#1 Knottin PIP</span>
-                </div>
-                <div className="flex items-center justify-between text-[12.5px] pt-1.5 border-t border-black/[0.04]">
-                  <span className="text-[#86868b]">Readiness</span>
-                  <div className="flex items-center gap-1.5 font-medium text-[#1d1d1f]">
-                    <span>Phase 3 (2028)</span>
-                    <span className="text-[11.5px]">Level 3</span>
-                  </div>
-                </div>
+            {/* Financial Box below www.twosteptx.com — List view with left side and right side */}
+            <div className="bg-white border border-black/[0.08] rounded-[14px] p-3 space-y-2.5">
+              <div className="flex items-start justify-between gap-3 text-[13px]">
+                <span className="text-[#86868b]">Investment Stage</span>
+                <span className="font-medium text-[#1d1d1f] text-right">Series A</span>
+              </div>
+              <div className="flex items-start justify-between gap-3 text-[13px]">
+                <span className="text-[#86868b]">Total Funding</span>
+                <span className="font-medium text-[#1d1d1f] text-right">$71.2 M</span>
+              </div>
+              <div className="flex items-start justify-between gap-3 text-[13px]">
+                <span className="text-[#86868b]">Annual Revenue</span>
+                <span className="font-medium text-[#1d1d1f] text-right">NA</span>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-[12.5px] text-[#6e6e73] pt-2 border-t border-black/[0.06]">
+            <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-[12.5px] text-[#6e6e73] pt-3 border-t border-black/[0.06]">
               <div>Technology: <span className="font-medium text-[#1d1d1f]">Peptide-conjugate therapeutics</span></div>
               <span>•</span>
-              <div><span className="font-medium text-[#1d1d1f]">Private</span> (Series A)</div>
+              <div>Ownership: <span className="font-medium text-[#1d1d1f]">Private</span></div>
               <span>•</span>
               <div>Founded <span className="font-medium text-[#1d1d1f]">2024</span></div>
               <span>•</span>
@@ -823,8 +1158,6 @@ export default function App() {
               <span>•</span>
               <div>Key Markets: <span className="font-medium text-[#1d1d1f]">United States</span></div>
               <span>•</span>
-              <div>Revenue: <span className="font-medium text-[#1d1d1f]">NA</span></div>
-              <span>•</span>
               <div className="flex items-center gap-1">
                 <Users className="w-3 h-3 text-[#86868b]" />
                 <span>2-10 Employees</span>
@@ -832,287 +1165,111 @@ export default function App() {
             </div>
           </div>
 
-          {/* TOP SCORE OVERVIEW STRIP — Clean Bento Grid without badge colors or circle wraps */}
+          {/* TOP SCORE OVERVIEW STRIP — Uniform 3x3 Grid (3 lines of 3 boxes each, all same width) */}
           <section id="scores-overview" className="scroll-mt-24 space-y-4">
             <h2 className="text-[20px] font-medium text-[#1d1d1f] tracking-tight">
               Evaluation Scores
             </h2>
 
-            {/* Master Bento Container */}
+            {/* Master 3x3 Bento Container */}
             <div className="bg-white border border-black/[0.08] rounded-[24px] overflow-hidden">
-              {/* Upper Section: Hero on Left + 2x2 Grid on Right */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-black/[0.08]">
-                {/* HERO CARD: Commercialization Readiness (col-span-5) */}
-                <div className="lg:col-span-5 p-6 sm:p-7 flex flex-col justify-between bg-white">
+              {/* LINE 1: 3 Boxes (Overall Score, Risks, Regional Impact) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-black/[0.08]">
+                {/* 1. Overall Score — Semicircle Speedometer Gauge */}
+                <div className="p-6 flex flex-col justify-between bg-white h-full min-h-[239.77px]">
                   <div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[16px] font-medium text-[#1d1d1f] tracking-tight">
-                        Commercialization Readiness
-                      </span>
-                      <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#2563eb] shrink-0">
-                        <span className="w-4 h-4 rounded-full bg-[#2563eb] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                        <span>Readout in 2028</span>
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <span className="text-[15px] font-medium text-[#1d1d1f]">Overall Score</span>
+                      <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#16a34a] shrink-0">
+                        <span className="font-bold">↑</span>
+                        <span>High Potential</span>
                       </div>
                     </div>
 
-                    {/* Display Score */}
-                    <div className="flex items-baseline gap-1 mt-3 mb-1">
-                      <span className="text-[52px] sm:text-[60px] font-medium text-[#1d1d1f] tracking-tight leading-none">
-                        3
-                      </span>
-                      <span className="text-[20px] font-normal text-[#86868b] ml-1">/ 5</span>
-                    </div>
-
-                    {/* Custom Readiness Area Graph (matching reference design: ramp up, plateau, dashed guide & dot) */}
-                    <div className="mt-2 -mb-2 max-w-full" style={{ width: '377.09px' }}>
-                      <svg
-                        viewBox="0 0 377.09 90"
-                        className="h-[90px] sm:h-[105px] overflow-visible"
-                        style={{ width: '377.09px', maxWidth: '100%' }}
-                        preserveAspectRatio="none"
-                      >
-                        <defs>
-                          <linearGradient id="readiness-area-gradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.22" />
-                            <stop offset="60%" stopColor="#2563eb" stopOpacity="0.08" />
-                            <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
-                          </linearGradient>
-                        </defs>
-
-                        {/* Shaded Area Fill — exactly 377.09px width */}
-                        <path
-                          d="M 0,75 L 85,36 C 105,24 130,24 160,24 L 377.09,24 L 377.09,88 L 0,88 Z"
-                          fill="url(#readiness-area-gradient)"
-                        />
-
-                        {/* Main Trend Line — exactly 377.09px width matching Application Potential 3px thickness */}
-                        <path
-                          d="M 0,75 L 85,36 C 105,24 130,24 160,24 L 377.09,24"
-                          fill="none"
-                          stroke="#2563eb"
-                          strokeWidth="3"
-                          vectorEffect="non-scaling-stroke"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-
-                        {/* Vertical Dashed Target Guide */}
-                        <line
-                          x1="373.5"
-                          y1="24"
-                          x2="373.5"
-                          y2="8"
-                          stroke="#2563eb"
-                          strokeWidth="1.5"
-                          strokeDasharray="2.5 2.5"
-                        />
-
-                        {/* Milestone Target Dot */}
-                        <circle cx="373.5" cy="8" r="3.5" fill="#2563eb" />
-                      </svg>
+                    {/* Semicircle Radial Rays Speedometer Gauge (100% match to media_1795675305384_c8f45193.png) */}
+                    <div className="pt-2 pb-1 flex flex-col items-center justify-center">
+                      <OverallScoreGauge />
                     </div>
                   </div>
-
-                  {/* Hero narrative description */}
-                  <p className="text-[13px] text-[#86868b] leading-[1.65] mt-4 pt-4 border-t border-black/[0.04]">
-                    Basilea expects phase 3 data readout and regulatory submission in 2028. Hence, the product is at an <span className="text-[#1d1d1f] font-medium">advanced clinical-stage</span>, pre-approval readiness level.
-                  </p>
                 </div>
 
-                {/* 2x2 GRID (col-span-7) */}
-                <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 divide-black/[0.08] bg-white">
-                  {/* Risks (Top-Left) */}
-                  <div className="p-6 border-b sm:border-r border-black/[0.08] flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[15px] font-medium text-[#1d1d1f]">Risks</span>
-                        <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#0284c7] shrink-0">
-                          <span className="w-4 h-4 rounded-full bg-[#0284c7] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                          <span>Medium</span>
-                        </div>
-                      </div>
-                      <div className="w-full h-[3px] bg-[#0284c7]/15 rounded-full overflow-hidden mt-3 mb-4" style={{ height: '3px' }}>
-                        <div className="h-full bg-[#0284c7] rounded-full" style={{ width: '60%' }} />
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[36px] sm:text-[40px] font-medium text-[#1d1d1f] tracking-tight leading-none">
-                          3
-                        </span>
-                        <span className="text-[14px] font-normal text-[#86868b] ml-1">/ 5</span>
+                {/* 2. Risks */}
+                <div className="p-6 flex flex-col justify-between bg-white h-full min-h-[239.77px]">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-[22px]">
+                      <span className="text-[15px] font-medium text-[#1d1d1f]">Risks</span>
+                      <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#b45309] shrink-0">
+                        <span className="font-bold">↑</span>
+                        <span>Medium</span>
                       </div>
                     </div>
-                    <div className="text-[12.5px] text-[#86868b] mt-3">
-                      Novel Gwt1-inhibition & rare mould heterogeneity
-                    </div>
+                    {renderScoreScale(3)}
                   </div>
+                  <CardSubline text="The novel Gwt1-inhibition mechanism may not deliver sufficient clinical benefit or an acceptable safety profile in the ongoing phase 3 studies of invasive candidiasis and invasive mould infections, particularly given the heterogeneity of rare mould infections and salvage-treatment populations." />
+                </div>
 
-                  {/* Regional Impact (Top-Right) */}
-                  <div className="p-6 border-b border-black/[0.08] flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[15px] font-medium text-[#1d1d1f]">Regional Impact</span>
-                        <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#00a958] shrink-0">
-                          <span className="w-4 h-4 rounded-full bg-[#00a958] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                          <span>High</span>
-                        </div>
-                      </div>
-                      <div className="w-full h-[3px] bg-[#00a958]/20 rounded-full overflow-hidden mt-3 mb-4" style={{ height: '3px' }}>
-                        <div className="h-full bg-[#00a958] rounded-full" style={{ width: '80%' }} />
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[36px] sm:text-[40px] font-medium text-[#1d1d1f] tracking-tight leading-none">
-                          4
-                        </span>
-                        <span className="text-[14px] font-normal text-[#86868b] ml-1">/ 5</span>
+                {/* 3. Regional Impact */}
+                <div className="p-6 flex flex-col justify-between bg-white h-full min-h-[239.77px]">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-[22px]">
+                      <span className="text-[15px] font-medium text-[#1d1d1f]">Regional Impact</span>
+                      <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#f97316] shrink-0">
+                        <span className="font-bold">↑</span>
+                        <span>High</span>
                       </div>
                     </div>
-                    <div className="text-[12.5px] text-[#86868b] mt-3">
-                      North America & Europe primary priority markets
-                    </div>
+                    {renderScoreScale(4)}
                   </div>
-
-                  {/* Application Potential (Bottom-Left) */}
-                  <div className="p-6 border-b sm:border-b-0 sm:border-r border-black/[0.08] flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[15px] font-medium text-[#1d1d1f]">Application Potential</span>
-                        <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#ec4899] shrink-0">
-                          <span className="w-4 h-4 rounded-full bg-[#ec4899] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↓</span>
-                          <span>Medium</span>
-                        </div>
-                      </div>
-                      <div className="w-full h-[3px] bg-[#ec4899]/15 rounded-full overflow-hidden mt-3 mb-4" style={{ height: '3px' }}>
-                        <div className="h-full bg-[#ec4899] rounded-full" style={{ width: '60%' }} />
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[36px] sm:text-[40px] font-medium text-[#1d1d1f] tracking-tight leading-none">
-                          3
-                        </span>
-                        <span className="text-[14px] font-normal text-[#86868b] ml-1">/ 5</span>
-                      </div>
-                    </div>
-                    <div className="text-[12.5px] text-[#86868b] mt-3">
-                      Candida auris, Lomentosporiosis & Mucormycosis
-                    </div>
-                  </div>
-
-                  {/* Buzzworthiness (Bottom-Right) */}
-                  <div className="p-6 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[15px] font-medium text-[#1d1d1f]">Buzzworthiness</span>
-                        <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#8b5cf6] shrink-0">
-                          <span className="w-4 h-4 rounded-full bg-[#8b5cf6] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                          <span>High</span>
-                        </div>
-                      </div>
-                      <div className="w-full h-[3px] bg-[#8b5cf6]/15 rounded-full overflow-hidden mt-3 mb-4" style={{ height: '3px' }}>
-                        <div className="h-full bg-[#8b5cf6] rounded-full" style={{ width: '100%' }} />
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[36px] sm:text-[40px] font-medium text-[#1d1d1f] tracking-tight leading-none">
-                          5
-                        </span>
-                        <span className="text-[14px] font-normal text-[#86868b] ml-1">/ 5</span>
-                      </div>
-                    </div>
-                    <div className="text-[12.5px] text-[#86868b] mt-3">
-                      First-in-class antifungal with Phase 3 & BARDA support
-                    </div>
-                  </div>
+                  <CardSubline text="North America & Europe primary priority focus regions for clinical trials and regulatory launch." />
                 </div>
               </div>
 
-              {/* Lower Section: 3-Column Connected Row — Hidden by default, shown when expanded */}
-              {isScoresExpanded && (
-                <div className="border-t border-black/[0.08] grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-black/[0.08] bg-white transition-all">
-                  {/* Technology Competition */}
-                  <div className="p-6 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[15px] font-medium text-[#1d1d1f]">Technology Competition</span>
-                        <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#6366f1] shrink-0">
-                          <span className="w-4 h-4 rounded-full bg-[#6366f1] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                          <span>High</span>
-                        </div>
-                      </div>
-                      <div className="w-full h-[3px] bg-[#6366f1]/15 rounded-full overflow-hidden mt-3 mb-4" style={{ height: '3px' }}>
-                        <div className="h-full bg-[#6366f1] rounded-full" style={{ width: '100%' }} />
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[36px] sm:text-[40px] font-medium text-[#1d1d1f] tracking-tight leading-none">
-                          5
-                        </span>
-                        <span className="text-[14px] font-normal text-[#86868b] ml-1">/ 5</span>
+              {/* LINE 2: 3 Boxes (Commercialization Readiness, Application Potential, Buzzworthiness) */}
+              <div className="border-t border-black/[0.08] grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-black/[0.08]">
+                {/* 4. Commercialization Readiness */}
+                <div className="p-6 flex flex-col justify-between bg-white h-full min-h-[239.77px]">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-[22px]">
+                      <span className="text-[15px] font-medium text-[#1d1d1f]">Commercialization Readiness</span>
+                      <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#b45309] shrink-0">
+                        <span className="font-bold">↑</span>
+                        <span>Medium</span>
                       </div>
                     </div>
-                    <div className="text-[12.5px] text-[#86868b] mt-3">
-                      Broad-spectrum differentiation against pharma incumbents
-                    </div>
+                    {renderScoreScale(3)}
                   </div>
-
-                  {/* Revenue Magnitude Potential */}
-                  <div className="p-6 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[15px] font-medium text-[#1d1d1f]">Revenue Magnitude Potential</span>
-                        <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#00a958] shrink-0">
-                          <span className="w-4 h-4 rounded-full bg-[#00a958] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                          <span>High</span>
-                        </div>
-                      </div>
-                      <div className="w-full h-[3px] bg-[#00a958]/20 rounded-full overflow-hidden mt-3 mb-4" style={{ height: '3px' }}>
-                        <div className="h-full bg-[#00a958] rounded-full" style={{ width: '100%' }} />
-                      </div>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-[32px] sm:text-[36px] font-medium text-[#1d1d1f] tracking-tight leading-none">
-                          $281.7 M
-                        </span>
-                        <span className="text-[14px] font-normal text-[#86868b]">(5 / 5)</span>
-                      </div>
-                    </div>
-                    <div className="text-[12.5px] text-[#86868b] mt-3">
-                      Basilea Pharmaceutica annual commercial revenue
-                    </div>
-                  </div>
-
-                  {/* Investor Lens */}
-                  <div className="p-6 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[15px] font-medium text-[#1d1d1f]">Investor Lens</span>
-                        <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#2563eb] shrink-0">
-                          <span className="w-4 h-4 rounded-full bg-[#2563eb] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                          <span>High</span>
-                        </div>
-                      </div>
-                      <div className="w-full h-[3px] bg-[#2563eb]/15 rounded-full overflow-hidden mt-3 mb-4" style={{ height: '3px' }}>
-                        <div className="h-full bg-[#2563eb] rounded-full" style={{ width: '100%' }} />
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[36px] sm:text-[40px] font-medium text-[#1d1d1f] tracking-tight leading-none">
-                          5
-                        </span>
-                        <span className="text-[14px] font-normal text-[#86868b] ml-1">/ 5</span>
-                      </div>
-                    </div>
-                    <div className="text-[12.5px] text-[#86868b] mt-3">
-                      $37M upfront with up to $110M milestone potential
-                    </div>
-                  </div>
+                  <CardSubline text="Basilea expects phase 3 data readout and regulatory submission in 2028. Hence, the product at an advanced clinical-stage, pre-approval readiness level." />
                 </div>
-              )}
 
-              {/* Bottom Expand/Collapse Bar */}
-              <div className="border-t border-black/[0.08] bg-[#fbfbfd]">
-                <button
-                  type="button"
-                  onClick={() => setIsScoresExpanded(!isScoresExpanded)}
-                  className="w-full py-2.5 px-6 flex items-center justify-center gap-1.5 text-[13px] font-medium text-[#1d1d1f] hover:bg-black/[0.02] cursor-pointer transition-colors"
-                >
-                  <span>{isScoresExpanded ? 'Collapse additional metrics' : 'Expand additional metrics (Technology Competition, Revenue, Investor Lens)'}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 text-[#86868b] transition-transform duration-200 ${isScoresExpanded ? 'rotate-180' : ''}`} />
-                </button>
+                {/* 5. Application Potential */}
+                <div className="p-6 flex flex-col justify-between bg-white h-full min-h-[239.77px]">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-[22px]">
+                      <span className="text-[15px] font-medium text-[#1d1d1f]">Application Potential</span>
+                      <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#b45309] shrink-0">
+                        <span className="font-bold">↓</span>
+                        <span>Medium</span>
+                      </div>
+                    </div>
+                    {renderScoreScale(3)}
+                  </div>
+                  <CardSubline text="Target Infections: Candida auris infections, Lomentosporiosis & Mucormycosis." />
+                </div>
+
+                {/* 6. Buzzworthiness */}
+                <div className="p-6 flex flex-col justify-between bg-white h-full min-h-[239.77px]">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-[22px]">
+                      <span className="text-[15px] font-medium text-[#1d1d1f]">Buzzworthiness</span>
+                      <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#ef4444] shrink-0">
+                        <span className="font-bold">↑</span>
+                        <span>High</span>
+                      </div>
+                    </div>
+                    {renderScoreScale(5)}
+                  </div>
+                  <CardSubline text="Fosmanogepix is gaining attention as a first-in-class antifungal targeting multidrug-resistant Candida auris and rare molds, supported by two Phase 3 trials and BARDA funding." />
+                </div>
               </div>
             </div>
           </section>
@@ -1176,432 +1333,279 @@ export default function App() {
             </div>
           </section>
 
-          {/* SECTION 3: COMMERCIALIZATION READINESS & RISKS */}
-          <section id="commercialization" className="scroll-mt-24 py-16 border-b border-black/[0.08] space-y-12">
-            <div>
-              <h2 className="text-[22px] sm:text-[26px] font-medium text-[#1d1d1f] tracking-tight">
-                Commercialization Readiness & Risks
-              </h2>
-            </div>
-
-            {/* Commercialization Readiness Level */}
-            <div id="comm-readiness" className="scroll-mt-24 bg-white border border-black/[0.08] rounded-[18px] p-6 lg:p-7 space-y-6">
-              <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
-                <h3 className="text-[18px] font-medium text-[#1d1d1f] tracking-tight">
-                  Commercialization Readiness Level
-                </h3>
-                <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#2563eb]">
-                  <span className="w-4 h-4 rounded-full bg-[#2563eb] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                  <span>Level 3 of 5 (Readout in 2028)</span>
-                </div>
-              </div>
-
-              {/* Horizontal Stepper — Mathematically centered */}
-              <div className="py-2">
-                <div className="relative max-w-[650px]">
-                  {/* Connecting Line — precisely centered through the 32px circles at top: 16px */}
-                  <div className="absolute left-10 right-10 top-4 -translate-y-1/2 h-[2px] bg-black/[0.08]">
-                    <div className="h-full bg-[#2563eb]" style={{ width: '50%' }} />
-                  </div>
-                  
-                  <div className="relative flex items-start justify-between">
-                    {[
-                      { step: 1, label: 'Stage 1' },
-                      { step: 2, label: 'Stage 2' },
-                      { step: 3, label: 'Current (3)' },
-                      { step: 4, label: 'Stage 4' },
-                      { step: 5, label: 'Stage 5' },
-                    ].map(({ step, label }) => {
-                      const isPassed = step < 3;
-                      const isCurrent = step === 3;
-                      return (
-                        <div key={step} className="flex flex-col items-center z-10 w-20 text-center">
-                          <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-[12.5px] font-medium transition-all ring-4 ring-white ${
-                              isCurrent
-                                ? 'bg-[#2563eb] text-white shadow-[0_0_0_2px_rgba(37,99,235,0.25)]'
-                                : isPassed
-                                ? 'bg-[#dbeafe] text-[#2563eb]'
-                                : 'bg-white border border-black/[0.18] text-[#86868b]'
-                            }`}
-                          >
-                            {step}
-                          </div>
-                          <span
-                            className={`text-[12px] mt-2 font-medium tracking-tight ${
-                              isCurrent ? 'text-[#2563eb] font-semibold' : 'text-[#86868b]'
-                            }`}
-                          >
-                            {label}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2 pt-3 border-t border-black/[0.06] text-[#515154] text-[14.5px] leading-[1.75]">
-                <div className="flex items-start gap-2.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#1d1d1f] mt-2 shrink-0" />
-                  <p>Basilea expects phase 3 data readout and regulatory submission in 2028.</p>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#1d1d1f] mt-2 shrink-0" />
-                  <p>Hence, the product at an advanced clinical-stage, pre-approval readiness level.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Risks */}
-            <div id="comm-risks" className="scroll-mt-24 bg-white border border-black/[0.08] rounded-[18px] p-6 lg:p-7 space-y-6">
-              <div className="flex items-center justify-between pb-3 border-b border-black/[0.06]">
-                <h3 className="text-[18px] font-medium text-[#1d1d1f] tracking-tight">
-                  Risks
-                </h3>
-                <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#0284c7]">
-                  <span className="w-4 h-4 rounded-full bg-[#0284c7] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                  <span>Medium (Score: 3 / 5)</span>
-                </div>
-              </div>
-
-              {/* Spectrum — Correctly structured without clipping */}
-              <div className="space-y-3 py-1 max-w-[650px]">
-                <div className="relative pt-3 pb-1">
-                  <div className="grid grid-cols-3 gap-1.5 h-2.5 rounded-full">
-                    <div className="bg-[#0284c7]/15 rounded-l-full" />
-                    <div className="bg-[#0284c7]/40" />
-                    <div className="bg-black/[0.08] rounded-r-full" />
-                  </div>
-                  {/* Indicator marker pin centered on middle 'Medium' bar */}
-                  <div className="absolute left-1/2 top-1.5 -translate-x-1/2 flex flex-col items-center">
-                    <div className="w-3.5 h-3.5 rounded-full bg-[#0284c7] ring-2 ring-white shadow-sm" />
-                  </div>
-                </div>
-
-                <div className="flex justify-between text-[12px] font-medium text-[#86868b]">
-                  <span>Low (1 - 2)</span>
-                  <span className="text-[#0284c7] font-semibold">Medium (3) • Active</span>
-                  <span>High (4 - 5)</span>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-black/[0.06]">
-                <p className="text-[#515154] text-[14.5px] leading-[1.75] max-w-[920px]">
-                  The novel Gwt1-inhibition mechanism may not deliver sufficient clinical benefit or an acceptable safety profile in the ongoing phase 3 studies of invasive candidiasis and invasive mould infections, particularly given the heterogeneity of rare mould infections and salvage-treatment populations.
-                </p>
-              </div>
-            </div>
-
-            {/* Regional Impact & Application Potential Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-6 border-t border-black/[0.06]">
-              {/* Regional Impact */}
-              <div id="comm-impact" className="scroll-mt-24 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[18px] font-medium text-[#1d1d1f] tracking-tight">
-                    Regional Impact
-                  </h3>
-                  <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#00a958]">
-                    <span className="w-4 h-4 rounded-full bg-[#00a958] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                    <span>Score: 4 / 5 (High)</span>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-b border-black/[0.05]">
-                    <span className="text-[14.5px] font-medium text-[#1d1d1f]">North America</span>
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex gap-1.5 items-center">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#00a958]" />
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#00a958]" />
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#00a958]" />
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#00a958]" />
-                        <span className="w-2.5 h-2.5 rounded-full bg-black/[0.1]" />
-                      </div>
-                      <span className="text-[12px] font-semibold text-[#00a958] bg-[#00a958]/10 px-2.5 py-0.5 rounded-full">High</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between py-2 border-b border-black/[0.05]">
-                    <span className="text-[14.5px] font-medium text-[#1d1d1f]">Europe</span>
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex gap-1.5 items-center">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7]" />
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7]" />
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7]" />
-                        <span className="w-2.5 h-2.5 rounded-full bg-black/[0.1]" />
-                        <span className="w-2.5 h-2.5 rounded-full bg-black/[0.1]" />
-                      </div>
-                      <span className="text-[12px] font-semibold text-[#0284c7] bg-[#0284c7]/10 px-2.5 py-0.5 rounded-full">Medium</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-between text-[11px] font-medium text-[#86868b]">
-                  <span>Low</span>
-                  <span className="text-[#0284c7] font-semibold">Medium</span>
-                  <span className="text-[#00a958] font-semibold">High</span>
-                </div>
-              </div>
-
-              {/* Application Potential */}
-              <div id="comm-applications" className="scroll-mt-24 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[18px] font-medium text-[#1d1d1f] tracking-tight">
-                    Application Potential
-                  </h3>
-                  <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#ec4899]">
-                    <span className="w-4 h-4 rounded-full bg-[#ec4899] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↓</span>
-                    <span>Score: 3 / 5 (Medium)</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="text-[13px] font-medium text-[#86868b]">Target Infections:</div>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-2.5 py-1 bg-black/[0.04] rounded-md text-[13px] font-medium text-[#1d1d1f]">
-                      Candida auris infections
-                    </span>
-                    <span className="px-2.5 py-1 bg-black/[0.04] rounded-md text-[13px] font-medium text-[#1d1d1f]">
-                      Lomentosporiosis
-                    </span>
-                    <span className="px-2.5 py-1 bg-black/[0.04] rounded-md text-[13px] font-medium text-[#1d1d1f]">
-                      Mucormycosis
-                    </span>
-                  </div>
-                </div>
-
-                <p className="text-[13.5px] text-[#515154] leading-relaxed pt-1">
-                  Basilea acquired fosmanogepix through an asset purchase agreement with Amplyx Pharmaceuticals, an affiliate of Pfizer, in November 2023, paying $ 37 million upfront with up to $110 million in potential commercial sales milestones.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* SECTION 4: MARKET INTELLIGENCE */}
-          <section id="market-intel" className="scroll-mt-24 py-16 border-b border-black/[0.08] space-y-12">
+          {/* SECTION 3: MARKET INTELLIGENCE */}
+          <section id="market-intel" className="scroll-mt-24 py-16 border-b border-black/[0.08] space-y-8">
             <div>
               <h2 className="text-[22px] sm:text-[26px] font-medium text-[#1d1d1f] tracking-tight">
                 Market Intelligence
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-              {/* Buzzworthiness */}
-              <div id="intel-buzz" className="scroll-mt-24 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[17px] font-medium text-[#1d1d1f] tracking-tight">
-                    Buzzworthiness
-                  </h3>
-                  <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#8b5cf6]">
-                    <span className="w-4 h-4 rounded-full bg-[#8b5cf6] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                    <span>Rating: High (5/5)</span>
+            {/* 2x2 Balanced Grid: Technology Competition, Revenue Magnitude, Investor Lens, Analyst's Insights */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 1. Technology Competition Level */}
+              <div id="intel-competition" className="p-6 bg-white border border-black/[0.08] rounded-[20px] flex flex-col justify-between space-y-5">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-[22px]">
+                    <span className="text-[15px] font-medium text-[#1d1d1f]">Technology Competition Level</span>
+                    <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#ef4444] shrink-0">
+                      <span className="font-bold">↑</span>
+                      <span>High</span>
+                    </div>
                   </div>
+                  {renderScoreScale(5)}
                 </div>
-                <div className="flex justify-between text-[11px] font-medium text-[#86868b] py-1 border-y border-black/[0.05]">
-                  <span>Low</span>
-                  <span>Medium</span>
-                  <span className="text-[#8b5cf6] font-semibold">High • Active</span>
+                <div className="pt-3 border-t border-black/[0.06]">
+                  <p className="text-[14px] text-[#515154] leading-[1.7]">
+                    Fosmanogepix is competing against established antifungal therapies from major pharmaceutical companies. However, the mechanism and broad spectrum activity offer differentiation, particularly for difficult-to-treat infections.
+                  </p>
                 </div>
-                <p className="text-[#515154] text-[14px] leading-relaxed">
-                  Fosmanogepix is gaining attention as a first-in-class antifungal targeting multidrug-resistant Candida auris and rare molds, supported by two Phase 3 trials and BARDA funding.
-                </p>
               </div>
 
-              {/* Technology Competition Level */}
-              <div id="intel-competition" className="scroll-mt-24 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[17px] font-medium text-[#1d1d1f] tracking-tight">
-                    Technology Competition Level
-                  </h3>
-                  <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#6366f1]">
-                    <span className="w-4 h-4 rounded-full bg-[#6366f1] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                    <span>Score: 5 / 5 (High)</span>
+              {/* 2. Revenue Magnitude Potential */}
+              <div id="intel-revenue" className="p-6 bg-white border border-black/[0.08] rounded-[20px] flex flex-col justify-between space-y-5">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-[22px]">
+                    <span className="text-[15px] font-medium text-[#1d1d1f]">Revenue Magnitude Potential</span>
+                    <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#ef4444] shrink-0">
+                      <span className="font-bold">↑</span>
+                      <span>High</span>
+                    </div>
                   </div>
+                  {renderScoreScale(5)}
                 </div>
-                <div className="space-y-1">
-                  <div className="grid grid-cols-5 gap-1.5">
-                    <div className="h-7 bg-[#6366f1]/10 rounded flex items-center justify-center text-[11.5px] text-[#6366f1]/70 font-medium">1</div>
-                    <div className="h-7 bg-[#6366f1]/10 rounded flex items-center justify-center text-[11.5px] text-[#6366f1]/70 font-medium">2</div>
-                    <div className="h-7 bg-[#6366f1]/10 rounded flex items-center justify-center text-[11.5px] text-[#6366f1]/70 font-medium">3</div>
-                    <div className="h-7 bg-[#6366f1]/10 rounded flex items-center justify-center text-[11.5px] text-[#6366f1]/70 font-medium">4</div>
-                    <div className="h-7 bg-[#6366f1] text-white rounded flex items-center justify-center text-[11.5px] font-medium shadow-sm">5 High</div>
+                <div className="pt-3 border-t border-black/[0.06] space-y-1.5">
+                  <div className="text-[28px] font-bold text-[#1d1d1f] tracking-tight">
+                    $ 281.7 M
                   </div>
-                  <div className="flex justify-between text-[11px] font-medium text-[#86868b]">
-                    <span>Low</span>
-                    <span>Medium</span>
-                    <span className="text-[#6366f1] font-semibold">High</span>
-                  </div>
+                  <p className="text-[14px] text-[#515154] leading-[1.7]">
+                    Basilea Pharmaceutica’s revenue is <span className="font-semibold text-[#1d1d1f]">$ 281.7 M</span>.
+                  </p>
                 </div>
-                <p className="text-[#515154] text-[14px] leading-relaxed">
-                  Fosmanogepix is competing against established antifungal therapies from major pharmaceutical companies. However, the mechanism and broad spectrum activity offer differentiation, particularly for difficult-to-treat infections.
-                </p>
               </div>
 
-              {/* Revenue Magnitude Potential */}
-              <div id="intel-revenue" className="scroll-mt-24 space-y-3 pt-6 border-t border-black/[0.06]">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[17px] font-medium text-[#1d1d1f] tracking-tight">
-                    Revenue Magnitude Potential
-                  </h3>
-                  <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#00a958]">
-                    <span className="w-4 h-4 rounded-full bg-[#00a958] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                    <span>Score: 5 / 5 (High)</span>
+              {/* 3. Investor Lens */}
+              <div id="intel-investor" className="p-6 bg-white border border-black/[0.08] rounded-[20px] flex flex-col justify-between space-y-5">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-[22px]">
+                    <span className="text-[15px] font-medium text-[#1d1d1f]">Investor Lens</span>
+                    <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#ef4444] shrink-0">
+                      <span className="font-bold">↑</span>
+                      <span>High</span>
+                    </div>
                   </div>
+                  {renderScoreScale(5)}
                 </div>
-                <div className="flex items-baseline justify-between py-1 border-y border-black/[0.05]">
-                  <span className="text-[24px] font-medium text-[#1d1d1f] tracking-tight">$ 281.7 M</span>
-                  <span className="text-[12.5px] font-semibold text-[#00a958]">Level 5</span>
+                <div className="flex items-start gap-3 pt-3 border-t border-black/[0.06]">
+                  <div className="w-9 h-9 rounded-xl bg-[#0071e3] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                    <span className="text-[16px] font-bold leading-none">$</span>
+                  </div>
+                  <p className="text-[14px] text-[#515154] leading-[1.7]">
+                    Basilea acquired fosmanogepix through an asset purchase agreement with Amplyx Pharmaceuticals, an affiliate of Pfizer, in November 2023, paying $ 37 million upfront with up to $110 million in potential commercial sales milestones.
+                  </p>
                 </div>
-                <div className="flex justify-between text-[11px] font-medium text-[#86868b]">
-                  <span>Low</span>
-                  <span>Medium</span>
-                  <span className="text-[#00a958] font-semibold">High • Level 5</span>
-                </div>
-                <p className="text-[#515154] text-[14px] leading-relaxed">
-                  Basilea Pharmaceutica's revenue is $ 281.7 M.
-                </p>
               </div>
 
-              {/* Investor Lens */}
-              <div id="intel-investor" className="scroll-mt-24 space-y-3 pt-6 border-t border-black/[0.06]">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[17px] font-medium text-[#1d1d1f] tracking-tight">
-                    Investor Lens
-                  </h3>
-                  <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#2563eb]">
-                    <span className="w-4 h-4 rounded-full bg-[#2563eb] text-white flex items-center justify-center text-[10px] leading-none shrink-0 font-bold">↑</span>
-                    <span>Score: 5 / 5 (High)</span>
+              {/* 4. Analyst's Insights */}
+              <div id="intel-analyst" className="p-6 bg-white border border-black/[0.08] rounded-[20px] flex flex-col justify-between space-y-4">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span className="text-[15px] font-medium text-[#1d1d1f]">Analyst's Insights</span>
+                    <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#0071e3] shrink-0">
+                      <span>Expert Commentary</span>
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3 py-1">
-                  <div className="bg-black/[0.03] rounded-lg p-2.5 text-center">
-                    <div className="text-[11px] text-[#86868b]">Upfront</div>
-                    <div className="text-[15px] font-medium text-[#1d1d1f] mt-0.5">$ 37 M</div>
-                  </div>
-                  <div className="bg-black/[0.03] rounded-lg p-2.5 text-center">
-                    <div className="text-[11px] text-[#86868b]">Milestones</div>
-                    <div className="text-[15px] font-medium text-[#1d1d1f] mt-0.5">Up to $110 M</div>
-                  </div>
+                <div className="pt-2 border-t border-black/[0.06]">
+                  <p className="text-[14px] text-[#515154] leading-[1.75]">
+                    Fosmanogepix is Basilea’s most advanced clinical-stage antifungal, expanding its portfolio beyond Cresemba through a novel mechanism and broad yeast and mold activity. Its potential against resistant Candida auris, Candida glabrata and rare molds could address unmet needs in difficult-to-treat infections. Oral and intravenous formulations offer flexibility in treatment. Its clinical potential will depend on demonstrating efficacy and safety in the ongoing Phase 3 trials, FAST-IC and FORWARD-IM.
+                  </p>
                 </div>
-                <div className="flex justify-between text-[11px] font-medium text-[#86868b]">
-                  <span>Low</span>
-                  <span>Medium</span>
-                  <span className="text-[#2563eb] font-semibold">High • Level 5</span>
-                </div>
-                <p className="text-[#515154] text-[14px] leading-relaxed">
-                  Basilea acquired fosmanogepix through an asset purchase agreement with Amplyx Pharmaceuticals, an affiliate of Pfizer, in November 2023, paying $ 37 million upfront with up to $110 million in potential commercial sales milestones.
-                </p>
               </div>
-            </div>
-
-            {/* Analyst's Insights */}
-            <div id="intel-analyst" className="scroll-mt-24 space-y-3 pt-8 border-t border-black/[0.06]">
-              <h3 className="text-[20px] font-medium text-[#1d1d1f] tracking-tight">
-                Analyst's Insights
-              </h3>
-              <p className="text-[#3a3a3c] text-[15.5px] leading-[1.8] max-w-[920px]">
-                Fosmanogepix is Basilea's most advanced clinical-stage antifungal, expanding its portfolio beyond Cresemba through a novel mechanism and broad yeast and mold activity. Its potential against resistant Candida auris, Candida glabrata and rare molds could address unmet needs in difficult-to-treat infections. Oral and intravenous formulations offer flexibility in treatment. Its clinical potential will depend on demonstrating efficacy and safety in the ongoing Phase 3 trials, FAST-IC and FORWARD-IM.
-              </p>
             </div>
           </section>
 
-          {/* SECTION 5: DAYONE DATA CENTERS & STRATEGIC ANALYSIS */}
+          {/* SECTION 4: DAYONE DATA CENTERS & STRATEGIC ANALYSIS */}
           <section id="strategic-analysis" className="scroll-mt-24 py-16 space-y-12">
             {/* Value Proposition of DayOne Data Centers */}
             <div id="strat-value" className="scroll-mt-24 space-y-3.5">
               <h2 className="text-[22px] sm:text-[26px] font-medium text-[#1d1d1f] tracking-tight">
                 Value Proposition of DayOne Data Centers
               </h2>
+              <div className="text-[15px] font-medium text-[#0071e3]">
+                Technology Assessment
+              </div>
               <p className="text-[#3a3a3c] text-[15.5px] leading-[1.8] max-w-[920px]">
                 DayOne's competitive advantage stems from its ONEShell, ONEPod and ONEFactory engineering architectures, built to standardize data center delivery across markets. Its model combines early site and power access, anchor customer commitments, modular construction and long-term service contracts. But the company concedes some newer engineering designs have not yet been put into production with customers, while fast-changing AI hardware, rack density and cooling can lead to costly redesigns.
               </p>
             </div>
 
-            {/* Key Competitors */}
+            {/* Key Competitors — Redesigned matching user attached UI card design (media_1795685069466_7de94af1.png) */}
             <div id="strat-competitors" className="scroll-mt-24 space-y-3.5 pt-6 border-t border-black/[0.06]">
               <h3 className="text-[19px] font-medium text-[#1d1d1f] tracking-tight">
                 Key Competitors
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 pt-1">
                 {[
-                  { name: 'Digital Realty', country: 'United States' },
-                  { name: 'AirTrunk', country: 'Australia' },
-                  { name: 'NTT Global Data Centers', country: 'Japan' },
-                  { name: 'QTS Realty Trust', country: 'United States' },
-                  { name: 'Equinix, Inc.', country: 'United States' },
-                ].map((c) => (
-                  <div key={c.name} className="py-2.5 px-3 bg-white border border-black/[0.08] rounded-[10px] space-y-0.5">
-                    <div className="text-[13.5px] font-medium text-[#1d1d1f] truncate">{c.name}</div>
-                    <div className="text-[12px] text-[#86868b]">{c.country}</div>
-                  </div>
-                ))}
+                  { name: 'Digital Realty', country: 'United States', style: 'yellow' },
+                  { name: 'AirTrunk', country: 'Australia', style: 'grey' },
+                  { name: 'NTT Global Data Centers', country: 'Japan', style: 'yellow' },
+                  { name: 'QTS Realty Trust', country: 'United States', style: 'grey' },
+                  { name: 'Equinix, Inc.', country: 'United States', style: 'yellow' },
+                ].map((c) => {
+                  const isYellow = c.style === 'yellow';
+                  return (
+                    <div
+                      key={c.name}
+                      className="bg-white border border-black/[0.08] rounded-[16px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.07)] hover:border-black/[0.14] transition-all flex flex-col justify-between"
+                    >
+                      {/* Top Header Banner matching the attached UI card style */}
+                      <div
+                        className={`px-3.5 py-2.5 ${
+                          isYellow ? 'bg-[#fef9c3]' : 'bg-[#f0f1f4]'
+                        } border-b border-black/[0.06] flex items-center min-h-[46px]`}
+                      >
+                        <span className="text-[13px] font-semibold text-[#1d1d1f] tracking-tight leading-snug">
+                          {c.name}
+                        </span>
+                      </div>
+
+                      {/* Card Body matching the attached UI card style */}
+                      <div className="bg-white px-3.5 py-3 rounded-b-[16px] min-h-[46px] flex items-center">
+                        <span className="text-[13px] text-[#48484a] font-normal underline decoration-black/25 underline-offset-4">
+                          {c.country}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Strategic Analysis (SWOT) */}
-            <div id="strat-swot" className="scroll-mt-24 space-y-4 pt-6 border-t border-black/[0.06]">
-              <h3 className="text-[19px] font-medium text-[#1d1d1f] tracking-tight">
-                Strategic Analysis
-              </h3>
+            {/* Strategic Analysis (SWOT) — Inspired by attached design (media_1795686606553_cca71723.jpg) in custom green palette */}
+            <div id="strat-swot" className="scroll-mt-24 space-y-5 pt-6 border-t border-black/[0.06]">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[20px] font-medium text-[#1d1d1f] tracking-tight">
+                  Strategic Analysis
+                </h3>
+              </div>
 
-              <div className="bg-white border border-black/[0.08] rounded-[18px] overflow-hidden">
-                {/* Top Row: S & W */}
-                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-black/[0.08]">
-                  {/* Strengths */}
-                  <div className="p-6 space-y-2.5">
-                    <div className="text-[15px] font-medium text-[#1d1d1f]">Strengths</div>
-                    <ul className="space-y-1.5 text-[13.5px] text-[#515154] leading-relaxed">
-                      <li className="flex items-start gap-2">
-                        <span>•</span>
-                        <span>Engineering architectures such as ONEShell, ONEPod and ONEFactory standardize delivery.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span>•</span>
-                        <span>Long-term contracts provide revenue visibility.</span>
-                      </li>
-                    </ul>
+              {/* Main SWOT Diagram Container with Left Sidebar & 2x2 Grid */}
+              <div className="bg-white border border-black/[0.08] rounded-[24px] overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.03)] grid grid-cols-1 lg:grid-cols-12">
+                {/* Left Sidebar */}
+                <div className="lg:col-span-4 bg-[#15803d] p-7 sm:p-9 text-white flex flex-col justify-between min-h-[220px] lg:min-h-full">
+                  <div>
+                    <div className="space-y-0.5">
+                      <div className="text-[34px] sm:text-[42px] font-bold text-white tracking-tight leading-none">
+                        SWOT
+                      </div>
+                      <div className="text-[22px] sm:text-[26px] font-normal text-emerald-100/85 tracking-tight">
+                        Diagram
+                      </div>
+                    </div>
                   </div>
-
-                  {/* Weaknesses */}
-                  <div className="p-6 space-y-2.5">
-                    <div className="text-[15px] font-medium text-[#1d1d1f]">Weaknesses</div>
-                    <ul className="space-y-1.5 text-[13.5px] text-[#515154] leading-relaxed">
-                      <li className="flex items-start gap-2">
-                        <span>•</span>
-                        <span>Power-intensive expansion increases infrastructure cost exposure.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span>•</span>
-                        <span>Large CapEx constrain expansion flexibility.</span>
-                      </li>
-                    </ul>
+                  <div className="pt-6 lg:pt-0 text-[12.5px] leading-snug text-emerald-100/80 font-normal">
+                    <div>DayOne Data Centers</div>
+                    <div className="text-white/90 font-medium">Strategic Assessment</div>
                   </div>
                 </div>
 
-                {/* Bottom Row: O & T */}
-                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-black/[0.08] border-t border-black/[0.08]">
-                  {/* Opportunities */}
-                  <div className="p-6 space-y-2.5">
-                    <div className="text-[15px] font-medium text-[#1d1d1f]">Opportunities</div>
-                    <p className="text-[13.5px] text-[#515154] leading-relaxed">
-                      DayOne aims to enhance its development pipeline while addressing long-term lease obligations. The cancellation of one lease has reduced future payments from $894.1M to $429.1M, with another data center anticipated to be operational by 2028. This scenario underscores the need for the company to synchronize lease commitments with construction timelines and customer demand as it scales.
-                    </p>
+                {/* Right Area: 2x2 Quadrant Grid — All White Backgrounds with Green Letter Badges */}
+                <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 bg-white">
+                  {/* Quadrant 1: Strengths (Top-Left) — White Background */}
+                  <div className="p-6 sm:p-7 bg-white border-b border-black/[0.08] md:border-r flex flex-col justify-between min-h-[210px]">
+                    <div>
+                      <div className="flex items-center gap-3.5 mb-3.5">
+                        <span className="w-11 h-11 bg-[#15803d] text-white text-[24px] font-bold flex items-center justify-center rounded-[10px] select-none shrink-0 shadow-sm">
+                          S
+                        </span>
+                        <h4 className="text-[18px] font-semibold text-[#1d1d1f] tracking-tight">
+                          Strengths
+                        </h4>
+                      </div>
+                      <ul className="space-y-2 text-[14px] text-[#515154] leading-[1.6]">
+                        <li className="flex items-start gap-2.5">
+                          <span className="text-[#1d1d1f] font-bold text-[14px] leading-tight shrink-0 select-none">•</span>
+                          <span>Engineering architectures such as ONEShell, ONEPod and ONEFactory standardize delivery.</span>
+                        </li>
+                        <li className="flex items-start gap-2.5">
+                          <span className="text-[#1d1d1f] font-bold text-[14px] leading-tight shrink-0 select-none">•</span>
+                          <span>Long-term contracts provide revenue visibility.</span>
+                        </li>
+                      </ul>
+                    </div>
                   </div>
 
-                  {/* Threats */}
-                  <div className="p-6 space-y-2.5">
-                    <div className="text-[15px] font-medium text-[#1d1d1f]">Threats</div>
-                    <ul className="space-y-1.5 text-[13.5px] text-[#515154] leading-relaxed">
-                      <li className="flex items-start gap-2">
-                        <span>•</span>
-                        <span>Power shortages can delay planned capacity expansion.</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span>•</span>
-                        <span>Data-center regulations can restrict market expansion.</span>
-                      </li>
-                    </ul>
+                  {/* Quadrant 2: Weaknesses (Top-Right) — White Background */}
+                  <div className="p-6 sm:p-7 bg-white border-b border-black/[0.08] flex flex-col justify-between min-h-[210px]">
+                    <div>
+                      <div className="flex items-center gap-3.5 mb-3.5">
+                        <span className="w-11 h-11 bg-[#15803d] text-white text-[24px] font-bold flex items-center justify-center rounded-[10px] select-none shrink-0 shadow-sm">
+                          W
+                        </span>
+                        <h4 className="text-[18px] font-semibold text-[#1d1d1f] tracking-tight">
+                          Weaknesses
+                        </h4>
+                      </div>
+                      <ul className="space-y-2 text-[14px] text-[#515154] leading-[1.6]">
+                        <li className="flex items-start gap-2.5">
+                          <span className="text-[#1d1d1f] font-bold text-[14px] leading-tight shrink-0 select-none">•</span>
+                          <span>Power-intensive expansion increases infrastructure cost exposure.</span>
+                        </li>
+                        <li className="flex items-start gap-2.5">
+                          <span className="text-[#1d1d1f] font-bold text-[14px] leading-tight shrink-0 select-none">•</span>
+                          <span>Large CapEx constrain expansion flexibility.</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Quadrant 3: Opportunities (Bottom-Left) — White Background */}
+                  <div className="p-6 sm:p-7 bg-white border-b md:border-b-0 md:border-r border-black/[0.08] flex flex-col justify-between min-h-[210px]">
+                    <div>
+                      <div className="flex items-center gap-3.5 mb-3.5">
+                        <span className="w-11 h-11 bg-[#15803d] text-white text-[24px] font-bold flex items-center justify-center rounded-[10px] select-none shrink-0 shadow-sm">
+                          O
+                        </span>
+                        <h4 className="text-[18px] font-semibold text-[#1d1d1f] tracking-tight">
+                          Opportunities
+                        </h4>
+                      </div>
+                      <ul className="space-y-2 text-[14px] text-[#515154] leading-[1.6]">
+                        <li className="flex items-start gap-2.5">
+                          <span className="text-[#1d1d1f] font-bold text-[14px] leading-tight shrink-0 select-none">•</span>
+                          <span>Rising AI demand expands hyperscale capacity requirements.</span>
+                        </li>
+                        <li className="flex items-start gap-2.5">
+                          <span className="text-[#1d1d1f] font-bold text-[14px] leading-tight shrink-0 select-none">•</span>
+                          <span>Data sovereignty drives localised connectivity requirements.</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Quadrant 4: Threats (Bottom-Right) — White Background */}
+                  <div className="p-6 sm:p-7 bg-white flex flex-col justify-between min-h-[210px]">
+                    <div>
+                      <div className="flex items-center gap-3.5 mb-3.5">
+                        <span className="w-11 h-11 bg-[#15803d] text-white text-[24px] font-bold flex items-center justify-center rounded-[10px] select-none shrink-0 shadow-sm">
+                          T
+                        </span>
+                        <h4 className="text-[18px] font-semibold text-[#1d1d1f] tracking-tight">
+                          Threats
+                        </h4>
+                      </div>
+                      <ul className="space-y-2 text-[14px] text-[#515154] leading-[1.6]">
+                        <li className="flex items-start gap-2.5">
+                          <span className="text-[#1d1d1f] font-bold text-[14px] leading-tight shrink-0 select-none">•</span>
+                          <span>Power shortages can delay planned capacity expansion.</span>
+                        </li>
+                        <li className="flex items-start gap-2.5">
+                          <span className="text-[#1d1d1f] font-bold text-[14px] leading-tight shrink-0 select-none">•</span>
+                          <span>Data-center regulations can restrict market expansion.</span>
+                        </li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1613,25 +1617,21 @@ export default function App() {
                 <h4 className="text-[17px] font-medium text-[#1d1d1f]">
                   IP/Patent Activity
                 </h4>
-                <p className="text-[14.5px] text-[#515154] leading-relaxed">
-                  There are no active trademarks or patents registered in its name.
-                </p>
+                <ul className="space-y-1.5 text-[14px] text-[#515154] leading-relaxed">
+                  <li className="flex items-start gap-2">
+                    <span>•</span>
+                    <span>There are no active trademarks or patents registered in its name.</span>
+                  </li>
+                </ul>
               </div>
 
               <div id="strat-future" className="scroll-mt-24 space-y-2">
                 <h4 className="text-[17px] font-medium text-[#1d1d1f]">
                   Future Focus Areas
                 </h4>
-                <ul className="space-y-2 text-[14.5px] text-[#515154]">
-                  <li className="flex items-start gap-2">
-                    <span>•</span>
-                    <span>Rising AI demand expands hyperscale capacity requirements.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span>•</span>
-                    <span>Data sovereignty drives localised connectivity requirements.</span>
-                  </li>
-                </ul>
+                <p className="text-[14px] text-[#515154] leading-relaxed">
+                  DayOne aims to enhance its development pipeline while addressing long-term lease obligations. The cancellation of one lease has reduced future payments from $894.1M to $429.1M, with another data center anticipated to be operational by 2028. This scenario underscores the need for the company to synchronize lease commitments with construction timelines and customer demand as it scales.
+                </p>
               </div>
             </div>
           </section>
